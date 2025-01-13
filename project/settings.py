@@ -14,6 +14,7 @@ from pathlib import Path
 from shutil import which
 import os
 from environ import Env
+import dj_database_url
 
 env = Env()
 Env.read_env()
@@ -40,8 +41,11 @@ else:
     DEBUG = False
 
 # ALLOWED_HOSTS = []
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '*']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'sia-1-61tk.onrender.com']
 
+CSRF_TRUSTED_ORIGINS = [
+    'https://sia-1-61tk.onrender.com',
+]
 
 # Application definition
 
@@ -110,16 +114,21 @@ WSGI_APPLICATION = 'project.wsgi.application'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
 # Database ilisi lang nig database ninyo
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'sia-1', 
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost', 
-        'PORT': '5432',
+if ENVIRONMENT=='development':
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': 'sia-1', 
+            'USER': 'postgres',
+            'PASSWORD': 'postgres',
+            'HOST': 'localhost', 
+            'PORT': '5432',
+        }
     }
-}
+else:
+    DATABASES={
+        'default': dj_database_url.parse(env('DATABASE_URL'))
+    }
 
 
 # Password validation
