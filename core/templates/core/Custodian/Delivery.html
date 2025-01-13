@@ -1,0 +1,213 @@
+{% extends "core/Custodian/Inventory.html" %}
+{% load static tailwind_tags %}
+{% block content %}
+<div class="w-full bg-white flex justify-center items-center relative">
+    <!-- Messages Section -->
+    {% if messages %}
+        {% for message in messages %}
+        <div id="notifications" class="px-4 py-2 rounded absolute top-10 left-1/2 transform -translate-x-1/2 
+            text-white {% if message.tags == 'error' %}bg-red-500{% elif message.tags == 'success' %}
+            bg-green-500
+            {% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    <div class="w-[50rem] h-[35rem]  mt-10">
+        <!--search-->
+        <div class=" min-w-full h-20 pt-2">
+            <input type="text" placeholder="Search" class="h-9 mt-6 rounded-3xl hover:border-blue-700" id="search-input" 
+            oninput="filterDelivery(this)">
+        </div>
+        <!--table container-->
+        <div class="min-w-full h-[26rem] bg-gray-3 overflow-auto table-auto">
+            <table class="w-full">
+                <thead class="bg-gray-200 border-b-3 border-gray-200">
+                    <tr class="">
+                        <th class="p-3 text-sm font-semibold tracking-wide text-center">Delivey ID</th>
+                        <th class="p-3 text-sm font-semibold tracking-wide text-center">Item</th>
+                        <th class="p-3 text-sm font-semibold tracking-wide text-center">Quantity</th>
+                        <th class="p-3 text-sm font-semibold tracking-wide text-center">Supplier</th>
+                        <th class="p-3 text-sm font-semibold tracking-wide text-center">total</th>
+                        <th class="p-3 text-sm font-semibold tracking-wide text-center">status</th>
+                        <th class="p-3 text-sm font-semibold tracking-wide text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="delivery-table">
+                    {% for delivery in check_deliveries %}
+                    <tr class="text-center">
+                        <td class="pt-1 mt-1">{{delivery.delivery_id}}</td>
+                        <td class="pt-1 mt-1">{{delivery.delivery_item}}</td>
+                        <td class="pt-1 mt-1">{{delivery.delivery_quantity}}</td>
+                        <td class="pt-1 mt-1">{{delivery.delivery_supplier}}</td>
+                        <td class="pt-1 mt-1">₱{{delivery.delivery_total}}</td>
+                        <td class="pt-1">
+                            <span class="bg-orange-600 text-white px-3 py-1.5 rounded-xl text-base">
+                                {{delivery.delivery_status}}
+                            </span>
+                        </td>
+                        <td class="pt-1 mt-1">
+                            <button class="bg-gray-2 text-white px-3 py-1 rounded-lg hover:text-orange-500" 
+                            onclick="openModal('accept-{{delivery.delivery_id}}')">accept</button>
+                            <button class="bg-gray-2 text-white px-3 py-1 rounded-lg hover:text-orange-500" 
+                            onclick="openModal('return-{{delivery.delivery_id}}')">return</button>
+                        </td>
+                        <!--accept modal-->
+                        <div id="accept-{{delivery.delivery_id}}" class="modal hidden fixed inset-0 
+                        bg-black bg-opacity-50 items-center justify-center">
+                            <div class="bg-white rounded-lg p-6 space-y-4 relative w-[24rem]">
+                                <div class="top-1 left-[21rem] absolute">
+                                    <button type="button"
+                                        class="text-black  rounded-full ml-4"
+                                        onclick="closeModal('accept-{{delivery.delivery_id}}')">
+                                        <img src="{% static 'images/closebtn.png' %}" alt="closebutton" class="w-7 h-7 ">
+                                    </button>
+                                </div>
+                                <h2 class="text-lg font-bold text-center">Confirm Order</h2>
+                                <div class="flex flex-col justify-center items-center pt-5">
+                                    <form method="POST" action="{% url 'accept_delivery' delivery_id=delivery.delivery_id%}" id="deliveryForm">
+                                        {%csrf_token%}
+                                        <!--item-->
+                                        <div class="mb-2 flex items-center justify-center w-full">
+                                            <label for="item" class="block text-black text-lg font-bold w-15">Item</label>
+                                            <input type="text" disabled class="shadow appearance-none border rounded w-[15rem] py-2 px-3 
+                                            text-black leading-tight focus:outline-none focus:shadow-outline ml-10" value="{{delivery.delivery_item}}">
+                                        </div>
+                                        <!--supplier-->
+                                        <div class="mb-2 flex items-center justify-center w-full">
+                                            <label for="supplier" class="block text-black text-lg font-bold w-15">Supplier</label>
+                                            <input type="text" disabled class="shadow appearance-none border rounded w-[15rem] py-2 px-3 
+                                            text-black leading-tight focus:outline-none focus:shadow-outline ml-1.5" value="{{delivery.delivery_supplier}}">
+                                        </div>
+                                        <!--quantity-->
+                                        <div class="mb-2 flex items-center justify-center w-full">
+                                            <label for="quantity" class="block text-black text-lg font-bold w-15">Quantity</label>
+                                            <input type="text" name="quantity" id="quantity-{{delivery.delivery_id}}" required class="shadow appearance-none border rounded w-[15rem] py-2 px-3 
+                                            text-black leading-tight focus:outline-none focus:shadow-outline ml-1.5" 
+                                            value="{{delivery.delivery_quantity}}" oninput="validatestocks(this)">
+                                        </div>
+                                        <!--price-->
+                                        <div class="mb-2 flex items-center justify-center w-full">
+                                            <label for="price" class="block text-black text-lg font-bold w-15">price</label>
+                                            <input type="text" id="supplier-price-{{delivery.delivery_id}}" disabled class="shadow appearance-none border rounded w-[15rem] py-2 px-3 
+                                            text-black leading-tight focus:outline-none focus:shadow-outline ml-9" value="{{delivery.supplier.supplier_price}}">
+                                        </div>
+                                        <!--total-->
+                                        <div class="mb-2 flex items-center justify-center w-full">
+                                            <label for="total" class="block text-black text-lg font-bold w-15">Total</label>
+                                            <input type="text" name="total" id="total-{{delivery.delivery_id}}" readonly class="shadow appearance-none border rounded w-[15rem] py-2 px-3 
+                                            text-black leading-tight focus:outline-none focus:shadow-outline ml-9" value="{{delivery.delivery_total}}">
+                                        </div>
+                                        <button type="submit" class="bg-gray-2 text-white px-7 py-2 rounded-2xl mt-4
+                                        hover:text-orange-500">Yes</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <!--Return modal-->
+                        <div id="return-{{delivery.delivery_id}}" class="modal hidden fixed inset-0 bg-black bg-opacity-50 items-center justify-center">
+                            <div class="bg-white rounded-lg p-6 space-y-4 relative w-[23rem]">
+                                <button type="button" class="text-black rounded-full absolute top-1 left-[21rem]" 
+                                    onclick="closeModal('return-{{delivery.delivery_id}}')">
+                                    <img src="{% static 'images/closebtn.png' %}" alt="closebutton" class="w-7 h-7">
+                                </button>
+                                <h2 class="text-lg font-bold text-center">Confirm Order</h2>
+                                <div class="flex flex-col justify-center items-center">
+                                    <form method="POST" action="{% url 'return_delivery' delivery_id=delivery.delivery_id %}">
+                                        {% csrf_token %}
+                                        <div class="flex flex-col">
+                                            <label class="font-semibold text-lg">State the reason</label>
+                                            <textarea name="reason" required class="shadow appearance-none border rounded w-[20rem] h-20 py-2 px-3 
+                                            text-black leading-tight focus:outline-none focus:shadow-outline resize-none" maxlength="255"></textarea>
+                                        </div>
+                                        <div class="mt-2">
+                                            <button type="submit" class="bg-gray-2 text-white px-7 py-2 rounded-2xl hover:text-orange-500 mt-3">Yes</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<script>
+    document.addEventListener('DOMContentLoaded', function (){
+        const quantityInputs = document.querySelectorAll('[id^="quantity-"]');
+        const totalInputs = document.querySelectorAll('[id^="total-"]');
+        const priceInputs = document.querySelectorAll('[id^="supplier-price-"]');
+
+        quantityInputs.forEach((quantityInput, index) => {
+        const totalInput = totalInputs[index];
+        const priceInput = priceInputs[index];
+
+        // Add event listener for real-time calculation
+        quantityInput.addEventListener('input', function () {
+            const price = parseFloat(priceInput.value) || 0;
+            const quantity = parseInt(quantityInput.value) || 0;
+            const total = price * quantity;
+            totalInput.value = total.toFixed(2); // Update the total dynamically
+            });
+        });
+    });
+
+    function validatestocks(input) { 
+        input.value = input.value.replace(/[^0-9]/g, ''); // Remove non-numeric characters
+        const value = parseInt(input.value, 10);
+
+        if(!value || value <= 0){
+            input.setCustomValidity('Enter quantity greater than 0');
+        } else {
+            input.setCustomValidity('');
+        }
+    }
+
+    function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.remove('hidden'); // Remove hidden class
+    modal.classList.add('flex'); // Add flex for centering
+    }
+
+    function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.remove('flex'); // Remove flex to prevent display issues
+    modal.classList.add('hidden'); // Add hidden class to hide modal
+    }
+
+    function filterDelivery() {
+        var input = document.getElementById('search-input');
+        var filter = input.value.toLowerCase();
+        var table = document.getElementById('delivery-table');
+        var rows = table.getElementsByTagName('tr');
+        
+        for (var i = 0; i < rows.length; i++) { // Start from 1 to skip header row
+            var row = rows[i];
+            var cells = row.getElementsByTagName('td');
+            var match = false;
+            
+            for (var j = 0; j < cells.length; j++) {
+                var cell = cells[j];
+                if (cell.textContent.toLowerCase().indexOf(filter) > -1) {
+                    match = true;
+                    break;
+                }
+            }
+            
+            if (match) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        }
+    }
+    setTimeout(() => {
+        var message = document.getElementById('notifications');
+        if (message){
+            message.style.display = 'none';
+        }
+    }, 5000);
+</script>
+{% endblock %}
